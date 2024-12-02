@@ -1,4 +1,4 @@
-namespace Day2;
+﻿namespace Day2;
 
 class Program
 {
@@ -7,16 +7,24 @@ class Program
         Day2 test = new Day2(1, 3);
         Day2 actual = new Day2(1, 3);
 
-        test.Process("test.txt");
-        actual.Process("input.txt");
 
         // Part 1
-        test.Part1();
-        actual.Part1();
+        Console.WriteLine("Part 1");
+        
+        test.ProcessPart1("test.txt");
+        actual.ProcessPart1("input.txt");
+        test.Answer();
+        actual.Answer();
+
+        Console.WriteLine("");
 
         // Part 2
-        test.Part2();
-        //actual.Part2();
+        Console.WriteLine("Part 2");
+        
+        test.ProcessPart2("test.txt");
+        actual.ProcessPart2("input.txt");
+        test.Answer();
+        actual.Answer();
     }
 }
 
@@ -30,9 +38,9 @@ enum Movement
 class Report {
     public Report(string line, int min, int max)
     {
+        Min = min;
+        Max = max;
         string[] levels = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        int? previousValue = null;
 
         foreach(var level in levels)
         {
@@ -42,44 +50,16 @@ class Report {
                 throw new Exception($"Invlaid level {level} found in '{line}'");
             }
 
-            if(previousValue.HasValue)
-            {
-                // Difference
-                int difference = previousValue.Value - value;
-                
-                if (previousValue.Value == value)
-                {
-                    Safe = false;
-                }
-                Movement currentMovement = GetMovement(difference);
-
-                if(Movement == Movement.Unknown)
-                {
-                    Movement = currentMovement;
-                }
-
-                if (Movement != currentMovement)
-                {
-                    Safe = false;
-                }
-                
-                if (Math.Abs(difference) < min || Math.Abs(difference) > max)
-                {
-                    Safe = false;
-                }
-
-            }
-
             Levels.Add(value);
-            previousValue = value;
         }
+
+        Safe = IsSafe();
     }
 
     public bool Safe { get; set; } = true;
     public List<int> Levels {get; set; } = new List<int>();
-
-    public Movement Movement { get; private set;} = Movement.Unknown;
-
+    private int Min { get; set; }
+    private int Max { get; set; }
 
     private static Movement GetMovement(int difference)
     {
@@ -95,6 +75,50 @@ class Report {
 
         return Movement.Unknown;
     }
+
+    public bool IsSafe(int? ignoreIndex = null)
+    {
+        Movement movement = Movement.Unknown;
+        int? previousValue = null;
+
+        for(int i = 0; i < Levels.Count; i++)
+        {
+            if(ignoreIndex.HasValue && i == ignoreIndex.Value)
+            {
+                continue;
+            }
+
+            if(previousValue.HasValue)
+            {
+                int difference = previousValue.Value - Levels[i];
+                
+                if (previousValue.Value == Levels[i])
+                {
+                    return false;
+                }
+                Movement currentMovement = GetMovement(difference);
+
+                if(movement == Movement.Unknown)
+                {
+                    movement = currentMovement;
+                }
+
+                if (movement != currentMovement)
+                {
+                    return false;
+                }
+                
+                if (Math.Abs(difference) < Min || Math.Abs(difference) > Max)
+                {
+                    return false;
+                }
+            }
+
+            previousValue = Levels[i];
+        }
+
+        return true;
+    }
 }
 
 class Day2
@@ -109,9 +133,9 @@ class Day2
     public int Max { get; init; }
 
     List<Report> reports = new List<Report>();
-    public void Process(string file)
+    public void ProcessPart1(string file)
     {
-
+        reports = new List<Report>();
         foreach (string line in File.ReadLines(file))
         {
             if (String.IsNullOrEmpty(line))
@@ -123,13 +147,38 @@ class Day2
         }
     }
 
-    public void Part1()
+    public void ProcessPart2(string file)
     {
-        Console.WriteLine($"Safe reports: {reports.Count(r => r.Safe)}");
+        reports = new List<Report>();
+        foreach (string line in File.ReadLines(file))
+        {
+            if (String.IsNullOrEmpty(line))
+            {
+                continue;
+            }
+
+            Report report = new Report(line, Min, Max);
+
+            if (!report.Safe)
+            {
+                List<bool> test = new List<bool>();
+                for(int i = 0; i < report.Levels.Count; i++)
+                {
+                    test.Add(report.IsSafe(i));
+                }
+
+                if (test.Any(t => t == true))
+                {
+                    report.Safe = true;
+                }
+            }
+
+            reports.Add(report);
+        }
     }
 
-    public void Part2()
+    public void Answer()
     {
-
+        Console.WriteLine($"Safe reports: {reports.Count(r => r.Safe)}");
     }
 }
